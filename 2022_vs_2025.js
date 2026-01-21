@@ -1,5 +1,5 @@
-var nepal_roi = ee.FeatureCollection("projects/final-459305/assets/NEPAL_BOUNDARY");
-Map.centerObject(nepal_roi, 7);
+var nepal = ee.FeatureCollection("projects/final-459305/assets/NEPAL_BOUNDARY");
+Map.centerObject(nepal, 7);
 
 function maskS2sr(image) {
   var scl = image.select('SCL');
@@ -16,27 +16,27 @@ function addIndices(image) {
 
 function getYearlyDNBR(pre_start, pre_end, post_start, post_end) {
   var s2 = ee.ImageCollection('COPERNICUS/S2_SR_HARMONIZED')
-    .filterBounds(nepal_roi)
+    .filterBounds(nepal)
     .select(['B2', 'B3', 'B4', 'B8', 'B11', 'B12', 'SCL']);
 
   var pre = s2.filterDate(pre_start, pre_end)
     .map(maskS2sr)
     .map(addIndices)
     .median()
-    .clip(nepal_roi);
+    .clip(nepal);
 
   var post = s2.filterDate(post_start, post_end)
     .map(maskS2sr)
     .map(addIndices)
     .median()
-    .clip(nepal_roi);
+    .clip(nepal);
 
   var dNBR = pre.select('NBR').subtract(post.select('NBR'));
 
   var water = pre.select('NDWI').lt(0);
   var snow = pre.select('NDSI').lt(0.2).and(post.select('NDSI').lt(0.2));
   var slope = ee.Terrain
-    .slope(ee.Image("USGS/SRTMGL1_003").clip(nepal_roi))
+    .slope(ee.Image("USGS/SRTMGL1_003").clip(nepal))
     .lt(45);
   var veg = pre.select('NBR').gt(0.10);
 
@@ -63,7 +63,7 @@ var diffVis = {
 
 Map.addLayer(diffMap, diffVis, 'Difference (2025 - 2022)');
 Map.addLayer(
-  ee.Image().paint(nepal_roi, 0, 2),
+  ee.Image().paint(nepal, 0, 2),
   {palette: 'black'},
   'Boundary'
 );
@@ -87,7 +87,7 @@ Export.image.toDrive({
   image: export_image,
   description: 'Nepal_Burn_Severity_Difference_2025vs2022',
   scale: 30,
-  region: nepal_roi,
+  region: nepal,
   maxPixels: 1e13,
   crs: 'EPSG:4326',
   folder: 'GEE_EXPORTS',
