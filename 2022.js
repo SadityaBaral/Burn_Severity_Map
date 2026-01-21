@@ -1,6 +1,6 @@
 
-var nepal_roi = ee.FeatureCollection("projects/final-459305/assets/NEPAL_BOUNDARY");
-Map.centerObject(nepal_roi, 7);
+var nepal = ee.FeatureCollection("projects/final-459305/assets/NEPAL_BOUNDARY");
+Map.centerObject(nepal, 7);
 
 var pre_start = '2021-10-15'; 
 var pre_end   = '2022-01-31';
@@ -22,20 +22,20 @@ function addIndices(image) {
 }
 
 var s2 = ee.ImageCollection('COPERNICUS/S2_SR_HARMONIZED')
-  .filterBounds(nepal_roi)
+  .filterBounds(nepal)
   .select(['B2', 'B3', 'B4', 'B8', 'B11', 'B12', 'SCL']);
 
 var pre_fire = s2.filterDate(pre_start, pre_end)
   .map(maskS2sr)
   .map(addIndices)
   .median()
-  .clip(nepal_roi);
+  .clip(nepal);
 
 var post_fire = s2.filterDate(post_start, post_end)
   .map(maskS2sr)
   .map(addIndices)
   .median()
-  .clip(nepal_roi);
+  .clip(nepal);
 
 var dNBR = pre_fire.select('NBR')
   .subtract(post_fire.select('NBR'))
@@ -46,7 +46,7 @@ var water_mask = pre_fire.select('NDWI').lt(0);
 var snow_mask = pre_fire.select('NDSI').lt(0.2)
   .and(post_fire.select('NDSI').lt(0.2));
 
-var dem = ee.Image("USGS/SRTMGL1_003").clip(nepal_roi);
+var dem = ee.Image("USGS/SRTMGL1_003").clip(nepal);
 var slope = ee.Terrain.slope(dem);
 var slope_mask = slope.lt(40); 
 
@@ -70,7 +70,7 @@ var burn_smooth = burn_classes.focal_mode({
   iterations: 1
 });
 
-var final_map = burn_smooth.updateMask(final_mask).clip(nepal_roi);
+var final_map = burn_smooth.updateMask(final_mask).clip(nepal);
 
 var visParams = {
   min: 0,
@@ -80,7 +80,7 @@ var visParams = {
 
 Map.addLayer(pre_fire, {bands: ['B4', 'B3', 'B2'], min: 0, max: 0.3}, 'True Color (Pre-Fire)', false);
 Map.addLayer(final_map, visParams, 'Burn Severity (Gap-Filled & Adjusted)');
-Map.addLayer(ee.Image().paint(nepal_roi, 0, 2), {palette: 'black'}, 'Boundary');
+Map.addLayer(ee.Image().paint(nepal, 0, 2), {palette: 'black'}, 'Boundary');
 
 var legend = ui.Panel({style: {position: 'bottom-left', padding: '8px 15px'}});
 
@@ -112,7 +112,7 @@ Export.image.toDrive({
   image: export_image,
   description: 'Nepal_Burn_Map_Optimized',
   scale: 30,
-  region: nepal_roi,
+  region: nepal,
   maxPixels: 1e13,
   crs: 'EPSG:4326',
   folder: 'GEE_EXPORTS',
